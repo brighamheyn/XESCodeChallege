@@ -7,7 +7,7 @@ use XES\CodeChallenge\Model\SearchesCountries;
 
 class Client implements SearchesCountries
 {
-    public const SEARCH_FIELDS = ['name', 'population', 'region', 'subregion', 'currencies', 'flags'];
+    public const SEARCH_FIELDS = ['name', 'population', 'region', 'subregion', 'currencies', 'flags', 'startOfWeek'];
 
     public const SEARCH_ENDPOINTS = ['name', 'alpha', 'currency', 'demonym'];
 
@@ -73,6 +73,11 @@ class CountryAdapter implements Country
             'src' => @$this->country['flags']['svg'] ?? @$this->country['flags']['png'],
             'alt' => $this->country['flags']['alt']
         ];
+    }
+    
+    public function getStartOfWeek(): string
+    {
+        return (string)@$this->country['startOfWeek'];
     }
 }
 
