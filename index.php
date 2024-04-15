@@ -5,6 +5,7 @@ include 'src/Infra.php';
 include 'src/View.php';
 
 use XES\CodeChallenge\Infra\RESTCountriesAPI\Client;
+use XES\CodeChallenge\View\CountrySearchInput;
 use XES\CodeChallenge\View\CountryTable;
 
 $term = @trim($_GET['q']);
@@ -13,6 +14,7 @@ $client = new Client();
 
 $countries = $client->search($term);
 
+$input = new CountrySearchInput($term);
 $tbl = new CountryTable($countries);
 
 ?>
@@ -34,7 +36,7 @@ $tbl = new CountryTable($countries);
     <body>
         <form method="GET">
             <label for="q">Country Search</label>
-            <input type="search" name="q" placeholder="name | code | currency" value="<?=$term?>" />
+            <input type="search" name="q" placeholder="name | code | currency" value="<?=$input->term?>" />
             <input type="submit" value="Search" />
         </form>
         

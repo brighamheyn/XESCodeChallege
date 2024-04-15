@@ -2,6 +2,12 @@
 
 namespace XES\CodeChallenge\View;
 
+class CountrySearchInput
+{
+    public function __construct(public readonly string $term) { }
+}
+
+
 class CountryTable 
 {
     public function __construct(private readonly array $countries) { }
