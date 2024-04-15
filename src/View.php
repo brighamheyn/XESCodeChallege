@@ -2,9 +2,16 @@
 
 namespace XES\CodeChallenge\View;
 
+use XES\CodeChallenge\Model\SearchBy;
+
 class CountrySearchInput
 {
-    public function __construct(public readonly string $term) { }
+    public function __construct(public readonly string $term, public readonly array $searchingBy) { }
+
+    public function isSearchingBy(SearchBy $searchBy): bool
+    {
+        return in_array($searchBy, $this->searchingBy);
+    }
 }
 
 

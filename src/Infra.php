@@ -3,20 +3,23 @@
 namespace XES\CodeChallenge\Infra\RESTCountriesAPI;
 
 use XES\CodeChallenge\Model\Country;
+use XES\CodeChallenge\Model\SearchBy;
 use XES\CodeChallenge\Model\SearchesCountries;
+
+use const XES\CodeChallenge\Model\DEFAULT_SEARCH_BY;
 
 class Client implements SearchesCountries
 {
-    public const SEARCH_FIELDS = ['name', 'population', 'region', 'subregion', 'currencies', 'flags'];
+    public const SEARCH_FIELDS = ['name', 'population', 'region', 'subregion', 'currencies', 'flags', 'cca2', 'ccn3', 'cca3', 'cioc'];
 
-    public const SEARCH_ENDPOINTS = ['name', 'alpha', 'currency', 'demonym'];
-
-    public function search(string $term): array 
+    public function search(string $term, array $searchingBy = DEFAULT_SEARCH_BY): array 
     {
         $slug = rawurlencode(strtolower($term));
         $fields = join(',', self::SEARCH_FIELDS);
 
-        $all = array_reduce(self::SEARCH_ENDPOINTS, function($results, $endpoint) use ($slug, $fields) {
+        $endpoints = array_reduce($searchingBy, fn($acc, $searchBy) => [...$acc, ...$this->getEndpoints($searchBy)], []);
+
+        $all = array_reduce($endpoints, function($results, $endpoint) use ($slug, $fields) {
             $countries = json_decode(file_get_contents("https://restcountries.com/v3.1/$endpoint/$slug?fields=$fields"), true) ?? [];
 
             // the API returns an object instead of an array for searches with only 1 result
@@ -36,6 +39,16 @@ class Client implements SearchesCountries
 
         return array_map(fn($country) => new CountryAdapter($country), $countries);
     }
+
+    private function getEndpoints(SearchBy $searchBy): array
+    {
+        return match($searchBy) {
+            SearchBy::Name => ['name'],
+            SearchBy::Codes => ['alpha'],
+            SearchBy::Currency => ['currency', 'demonym'],
+            default => []
+        };
+    }
 }
 
 class CountryAdapter implements Country 
@@ -45,6 +58,16 @@ class CountryAdapter implements Country
     public function getName(): string 
     {
         return $this->country['name']['official'];
+    }
+
+    public function getCodes(): array
+    {
+        return [
+            'cca2' => $this->country['cca2'], 
+            'ccn3' => $this->country['ccn3'], 
+            'cca3' => $this->country['cca3'],
+            'cioc' => $this->country['cioc']
+        ];
     }
 
     public function getPopulation(): string 
