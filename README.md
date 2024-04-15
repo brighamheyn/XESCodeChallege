@@ -9,8 +9,8 @@ A coding challenge issued to evaluate how a candidate approaches software develo
 Getting started
 
 1. Prerequistes: You have PHP version 8.0 or greater installed and configured
-2. Download repository: `git clone `
-3. Navigate to project directory `cd `
+2. Download repository: `git clone https://github.com/brighamheyn/XESCodeChallege.git`
+3. Navigate to project directory `cd XESCodeChallege`
 4. Start php http server `php -S localhost:8000`
 5. Navigate to http://localhost:8000/ in web browser
 

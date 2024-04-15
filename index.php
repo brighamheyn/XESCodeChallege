@@ -38,7 +38,7 @@ $tbl = new CountryTable($countries);
             <input type="submit" value="Search" />
         </form>
         
-        <?php if (count($tbl->getRows()) > 0): ?>
+        <?php if ($term !== ""): ?>
         <table>
             <thead>
                 <tr>
