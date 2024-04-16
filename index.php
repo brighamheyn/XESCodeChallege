@@ -5,17 +5,22 @@ include 'src/Infra.php';
 include 'src/View.php';
 
 use XES\CodeChallenge\Infra\RESTCountriesAPI\Client;
-use XES\CodeChallenge\View\CountryFilter;
+use XES\CodeChallenge\Model\SearchBy;
+use XES\CodeChallenge\View\FilterBy;
 use XES\CodeChallenge\View\CountrySearchInput;
 use XES\CodeChallenge\View\CountryTable;
 
+use const XES\CodeChallenge\Model\DEFAULT_SEARCH_BY;
+
 $term = @trim($_GET['q']);
-$filteringBy = array_filter(array_map(fn($f) => CountryFilter::tryFrom($f), @$_GET["f"] ?? []), fn($f) => $f != null);
+$filteringBy = array_filter(array_map(fn($f) => FilterBy::tryFrom($f), @$_GET["f"] ?? []), fn($f) => $f != null);
+$searchingBy = array_filter(array_map(fn($s) => SearchBy::tryFrom($s), @$_GET['s'] ?? array_map(fn($by) => $by->value, DEFAULT_SEARCH_BY)), fn($by) => $by != null);
 
 $client = new Client();
-$countries = $client->search($term);
 
-$input = new CountrySearchInput($term, $filteringBy);
+$countries = $client->search($term, $searchingBy);
+
+$input = new CountrySearchInput($term, $filteringBy, $searchingBy);
 $tbl = new CountryTable($countries, $filteringBy);
 
 ?>
@@ -39,18 +44,33 @@ $tbl = new CountryTable($countries, $filteringBy);
             <label for="q">Country Search</label>
             <input type="search" name="q" placeholder="name | code | currency" value="<?=$input->term?>" />
             <input type="submit" value="Search" />
+
+            <div>Search by</div>
+
+            <input type="checkbox" name="s[]" value="name" <?=$input->isSearchingBy(SearchBy::Name) ? "checked": "" ?> />
+            <label>Name</label>
+
+            <input type="checkbox" name="s[]" value="codes" <?=$input->isSearchingBy(SearchBy::Codes) ? "checked": "" ?> />
+            <label>Codes</label>
+
+            <input type="checkbox" name="s[]" value="currency" <?=$input->isSearchingBy(SearchBy::Currency) ? "checked": "" ?> />
+            <label>Currency</label>
+
+            <input type="checkbox" name="s[]" value="region" <?=$input->isSearchingBy(SearchBy::Region) ? "checked": "" ?> />
+            <label>Region</label>
+            
             
             <div>Filter by</div>
 
-            <input type="checkbox" name="f[]" value="<?=CountryFilter::pop_gt_1m->value?>" <?=$input->isFiltering(CountryFilter::pop_gt_1m) ? "checked" : ""?>/>
-            <label>Population > 1m</label>
+            <input type="checkbox" name="f[]" value="<?=FilterBy::PopulationIsGreaterThan10M->value?>" <?=$input->isFilteringBy(FilterBy::PopulationIsGreaterThan10M) ? "checked" : ""?>/>
+            <label>Population > 10m</label>
 
-            <input type="checkbox" name="f[]" value="<?=CountryFilter::start_of_wk_sun->value?>" <?=$input->isFiltering(CountryFilter::start_of_wk_sun) ? "checked" : ""?>/>
+            <input type="checkbox" name="f[]" value="<?=FilterBy::StartOfWeekIsSunday->value?>" <?=$input->isFilteringBy(FilterBy::StartOfWeekIsSunday) ? "checked" : ""?>/>
             <label>Starts week on Sunday</label>
 
         </form>
         
-        <?php if ($term !== ""): ?>
+        <?php if ($input->term !== ""): ?>
         <table>
             <thead>
                 <tr>

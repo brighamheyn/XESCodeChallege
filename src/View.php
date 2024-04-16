@@ -3,21 +3,27 @@
 namespace XES\CodeChallenge\View;
 
 use XES\CodeChallenge\Model\Country;
+use XES\CodeChallenge\Model\SearchBy;
 
-enum CountryFilter: string
+enum FilterBy: string
 {
-    case pop_gt_1m = "pop_gt_1m";
-    case start_of_wk_sun = "start_of_wk_sun";
+    case PopulationIsGreaterThan10M = "pop_gt_10m";
+    case StartOfWeekIsSunday = "start_of_wk_sun";
 }
 
 
 class CountrySearchInput
 {
-    public function __construct(public readonly string $term, public readonly array $filteringBy = []) { }
+    public function __construct(public readonly string $term, public readonly array $filteringBy = [], public readonly array $searchingBy) { }
 
-    public function isFiltering(CountryFilter $filterBy): bool
+    public function isFilteringBy(FilterBy $filterBy): bool
     {
         return in_array($filterBy, $this->filteringBy);
+    }
+
+    public function isSearchingBy(SearchBy $searchBy): bool
+    {
+        return in_array($searchBy, $this->searchingBy);
     }
 }
 
@@ -51,8 +57,8 @@ class CountryTable
     public function isFilteredOut(Country $country): bool
     {
         return $this->filteringBy != [] && in_array(false, array_map(fn($filterBy) => match ($filterBy) {
-            CountryFilter::pop_gt_1m => (int)$country->getPopulation() > 1_000_000,
-            CountryFilter::start_of_wk_sun => strtolower($country->getStartOfWeek()) == "sunday", 
+            FilterBy::PopulationIsGreaterThan10M => (int)$country->getPopulation() > 10_000_000,
+            FilterBy::StartOfWeekIsSunday => strtolower($country->getStartOfWeek()) == "sunday", 
             default => true
         }, $this->filteringBy));
     }
