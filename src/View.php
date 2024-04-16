@@ -14,7 +14,7 @@ enum FilterBy: string
 
 class CountrySearchInput
 {
-    public function __construct(public readonly string $term, public readonly array $filteringBy = [], public readonly array $searchingBy) { }
+    public function __construct(public readonly string $term, public readonly array $filteringBy = [], public readonly array $searchingBy = [], public readonly bool $useCustomSearch = false) { }
 
     public function isFilteringBy(FilterBy $filterBy): bool
     {

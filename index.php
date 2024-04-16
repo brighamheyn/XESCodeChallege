@@ -5,6 +5,7 @@ include 'src/Infra.php';
 include 'src/View.php';
 
 use XES\CodeChallenge\Infra\RESTCountriesAPI\Client;
+use XES\CodeChallenge\Model\Countries;
 use XES\CodeChallenge\Model\SearchBy;
 use XES\CodeChallenge\View\FilterBy;
 use XES\CodeChallenge\View\CountrySearchInput;
@@ -15,12 +16,16 @@ use const XES\CodeChallenge\Model\DEFAULT_SEARCH_BY;
 $term = @trim($_GET['q']);
 $filteringBy = array_filter(array_map(fn($f) => FilterBy::tryFrom($f), @$_GET["f"] ?? []), fn($f) => $f != null);
 $searchingBy = array_filter(array_map(fn($s) => SearchBy::tryFrom($s), @$_GET['s'] ?? array_map(fn($by) => $by->value, DEFAULT_SEARCH_BY)), fn($by) => $by != null);
+$useCustomSearch = (bool)@$_GET['c'];
 
 $client = new Client();
 
-$countries = $client->search($term, $searchingBy);
+$countries = match ($useCustomSearch) {
+    true => (new Countries($client->all()))->search($term, $searchingBy),
+    false => $client->search($term, $searchingBy)
+};
 
-$input = new CountrySearchInput($term, $filteringBy, $searchingBy);
+$input = new CountrySearchInput($term, $filteringBy, $searchingBy, $useCustomSearch);
 $tbl = new CountryTable($countries, $filteringBy);
 
 ?>
@@ -42,21 +47,27 @@ $tbl = new CountryTable($countries, $filteringBy);
     <body>
         <form method="GET">
             <label for="q">Country Search</label>
-            <input type="search" name="q" placeholder="name | code | currency" value="<?=$input->term?>" />
+            <input type="search" name="q" placeholder="term" value="<?=$input->term?>" />
             <input type="submit" value="Search" />
+
+            <input type="radio" name="c" value="0" <?=!$input->useCustomSearch ? "checked": "" ?> />
+            <label>API Search</label>
+
+            <input type="radio" name="c" value="1" <?=$input->useCustomSearch ? "checked": "" ?> />
+            <label>Custom Search</label>
 
             <div>Search by</div>
 
-            <input type="checkbox" name="s[]" value="name" <?=$input->isSearchingBy(SearchBy::Name) ? "checked": "" ?> />
+            <input type="checkbox" name="s[]" value="<?=SearchBy::Name->value?>" <?=$input->isSearchingBy(SearchBy::Name) ? "checked": "" ?> />
             <label>Name</label>
 
-            <input type="checkbox" name="s[]" value="codes" <?=$input->isSearchingBy(SearchBy::Codes) ? "checked": "" ?> />
+            <input type="checkbox" name="s[]" value="<?=SearchBy::Codes->value?>" <?=$input->isSearchingBy(SearchBy::Codes) ? "checked": "" ?> />
             <label>Codes</label>
 
-            <input type="checkbox" name="s[]" value="currency" <?=$input->isSearchingBy(SearchBy::Currency) ? "checked": "" ?> />
+            <input type="checkbox" name="s[]" value="<?=SearchBy::Currency->value?>" <?=$input->isSearchingBy(SearchBy::Currency) ? "checked": "" ?> />
             <label>Currency</label>
 
-            <input type="checkbox" name="s[]" value="region" <?=$input->isSearchingBy(SearchBy::Region) ? "checked": "" ?> />
+            <input type="checkbox" name="s[]" value="<?=SearchBy::Region->value?>" <?=$input->isSearchingBy(SearchBy::Region) ? "checked": "" ?> />
             <label>Region</label>
             
             

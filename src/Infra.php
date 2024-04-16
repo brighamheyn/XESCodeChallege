@@ -12,6 +12,14 @@ class Client implements SearchesCountries
 {
     public const SEARCH_FIELDS = ['name', 'population', 'region', 'subregion', 'currencies', 'flags', 'startOfWeek', 'cca2', 'ccn3', 'cca3', 'cioc'];
 
+    public function all(): array 
+    {
+        $fields = join(',', self::SEARCH_FIELDS);
+        $countries = json_decode(file_get_contents("https://restcountries.com/v3.1/all?fields=$fields"), true) ?? [];
+
+        return array_map(fn($country) => new CountryAdapter($country), $countries);
+    }
+
     public function search(string $term, array $searchingBy = DEFAULT_SEARCH_BY): array 
     {
         $slug = rawurlencode(strtolower($term));
