@@ -50,14 +50,17 @@ interface ReadOnlyCountries
 }
 
 
-class Countries implements SearchesCountries
-{
-    public function __construct(private readonly ReadOnlyCountries $countries) { }
+class CustomSearch implements SearchesCountries
+{   
+    /**
+     * @param Country[] $countries
+     */
+    public function __construct(private readonly array $countries = []) { }
 
     
     public function search(string $term, array $searchingBy = DEFAULT_SEARCH_BY): array
     {   
-        return array_filter($this->countries->all(), fn($country) => $this->matches($country, $term, $searchingBy));
+        return array_filter($this->countries, fn($country) => $this->matches($country, $term, $searchingBy));
     }
 
     private function matches(Country $country, string $term, array $searchingBy = DEFAULT_SEARCH_BY): bool

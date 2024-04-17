@@ -4,8 +4,8 @@ include 'src/Model.php';
 include 'src/Infra.php';
 include 'src/View.php';
 
-use XES\CodeChallenge\Infra\RESTCountriesAPI\Client;
-use XES\CodeChallenge\Model\Countries;
+use XES\CodeChallenge\Infra\RESTCountriesAPI\Client as RESTCountriesAPI;
+use XES\CodeChallenge\Model\CustomSearch;
 use XES\CodeChallenge\Model\SearchBy;
 use XES\CodeChallenge\View\FilterBy;
 use XES\CodeChallenge\View\CountrySearchInput;
@@ -24,15 +24,17 @@ $sortBy = SortBy::tryFrom(@$_GET["t"]) ?? SortBy::Name;
 $sortOrder = SortOrder::tryFrom(@$_GET["o"]) ?? SortOrder::Asc;
 $searchType = SearchType::tryFrom(@$_GET['c']) ?? SearchType::API;
 
+$countries = new RESTCountriesAPI();
+
 $searchClient = match ($searchType) {
-    SearchType::Custom => new Countries(new Client()),
-    SearchType::API => new Client()
+    SearchType::Custom => new CustomSearch($countries->all()),
+    SearchType::API => $countries
 };
 
-$countries = $searchClient->search($term, $searchingBy);
+$searchResults = $searchClient->search($term, $searchingBy);
 
 $input = new CountrySearchInput($term, $searchingBy, $searchType);
-$tbl = new CountryTable($countries, $filteringBy, $sortBy, $sortOrder);
+$tbl = new CountryTable($searchResults, $filteringBy, $sortBy, $sortOrder);
 
 ?>
 
@@ -67,7 +69,7 @@ $tbl = new CountryTable($countries, $filteringBy, $sortBy, $sortOrder);
             <input type="submit" value="Search" />
 
             <fieldset>
-                <legend>Search Algorithm</legend>
+                <legend>Search Type</legend>
 
                 <input type="radio" name="c" value="<?=SearchType::API->value?>" <?=$input->isSearchingType(SearchType::API) ? "checked": "" ?> />
                 <label for="c">API</label>
