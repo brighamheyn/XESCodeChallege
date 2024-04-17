@@ -11,6 +11,7 @@ use XES\CodeChallenge\View\FilterBy;
 use XES\CodeChallenge\View\CountrySearchInput;
 use XES\CodeChallenge\View\CountryTable;
 use XES\CodeChallenge\View\HighlightedText;
+use XES\CodeChallenge\View\SearchType;
 use XES\CodeChallenge\View\SortOrder;
 use XES\CodeChallenge\View\SortBy;
 
@@ -21,16 +22,16 @@ $filteringBy = FilterBy::tryFromArray(@$_GET["f"] ?? []) ?? [];
 $searchingBy = SearchBy::tryFromArray(@$_GET['s'] ?? []) ?? DEFAULT_SEARCH_BY;
 $sortBy = SortBy::tryFrom(@$_GET["t"]) ?? SortBy::Name;
 $sortOrder = SortOrder::tryFrom(@$_GET["o"]) ?? SortOrder::Asc;
-$useCustomSearch = (bool)@$_GET['c'];
+$searchType = SearchType::tryFrom(@$_GET['c']) ?? SearchType::API;
 
-$searchClient = match ($useCustomSearch) {
-    true => new Countries(new Client()),
-    false => new Client()
+$searchClient = match ($searchType) {
+    SearchType::Custom => new Countries(new Client()),
+    SearchType::API => new Client()
 };
 
 $countries = $searchClient->search($term, $searchingBy);
 
-$input = new CountrySearchInput($term, $searchingBy, $useCustomSearch);
+$input = new CountrySearchInput($term, $searchingBy, $searchType);
 $tbl = new CountryTable($countries, $filteringBy, $sortBy, $sortOrder);
 
 ?>
@@ -68,10 +69,10 @@ $tbl = new CountryTable($countries, $filteringBy, $sortBy, $sortOrder);
             <fieldset>
                 <legend>Search Algorithm</legend>
 
-                <input type="radio" name="c" value="0" <?=!$input->useCustomSearch ? "checked": "" ?> />
+                <input type="radio" name="c" value="<?=SearchType::API->value?>" <?=$input->isSearchingType(SearchType::API) ? "checked": "" ?> />
                 <label for="c">API</label>
 
-                <input type="radio" name="c" value="1" <?=$input->useCustomSearch ? "checked": "" ?> />
+                <input type="radio" name="c" value="<?=SearchType::Custom->value?>" <?=$input->isSearchingType(SearchType::Custom) ? "checked": "" ?> />
                 <label for="c">Custom</label>
             </fieldset>
 

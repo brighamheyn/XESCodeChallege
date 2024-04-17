@@ -36,6 +36,10 @@ interface Country
 
 interface SearchesCountries
 {
+    /**
+     * @param string $term Search term
+     * @param SearchBy[] $searchingBy A list of search by criteria
+     */
     public function search(string $term, array $searchingBy = DEFAULT_SEARCH_BY): array;
 }
 
@@ -50,10 +54,7 @@ class Countries implements SearchesCountries
 {
     public function __construct(private readonly ReadOnlyCountries $countries) { }
 
-    /**
-     * @param string $term Search term
-     * @param SearchBy[] $searchingBy A list of search by criteria
-     */
+    
     public function search(string $term, array $searchingBy = DEFAULT_SEARCH_BY): array
     {   
         return array_filter($this->countries->all(), fn($country) => $this->matches($country, $term, $searchingBy));

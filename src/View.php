@@ -6,13 +6,25 @@ use XES\CodeChallenge\Model\Country;
 use XES\CodeChallenge\Model\SearchBy;
 
 
+enum SearchType: string
+{
+    case API = "api";
+    case Custom = "custom";
+}
+
+
 class CountrySearchInput
 {
-    public function __construct(public readonly string $term = "", public readonly array $searchingBy = [], public readonly bool $useCustomSearch = false) { }
+    public function __construct(public readonly string $term = "", public readonly array $searchingBy = [], public readonly SearchType $searchType = SearchType::API) { }
 
     public function isSearchingBy(SearchBy $searchBy): bool
     {
         return in_array($searchBy, $this->searchingBy);
+    }
+
+    public function isSearchingType(SearchType $searchType): bool
+    {
+        return $this->searchType == $searchType;
     }
 }
 
@@ -32,6 +44,10 @@ class CountryTable
 {
     private ?array $rows = null;
 
+    /**
+     * @param Country[] $countries
+     * @param FilterBy[] $filteringBy
+     */
     public function __construct(private readonly array $countries, public readonly array $filteringBy = [], public readonly ?SortBy $sortBy = null, public readonly ?SortOrder $sortOrder = null) { } 
 
     public function getRows(): array
@@ -116,9 +132,12 @@ enum SortBy: string
     case Population = "population";
     case Region = "region";
 
-    public function sort(array &$array, SortOrder $sortOrder = SortOrder::Asc): void
+    /**
+     * @param CountryRow[] $rows
+     */
+    public function sort(array &$rows, SortOrder $sortOrder = SortOrder::Asc): void
     {
-        usort($array,  fn($a, $b) => match ($this) {
+        usort($rows,  fn($a, $b) => match ($this) {
             SortBy::Name => strcmp($a->country->getName(), $b->country->getName()),
             SortBy::Population => $a->country->getPopulation() - $b->country->getPopulation(),
             SortBy::Region => $a->country->getRegion() !== $b->country->getRegion() 
@@ -127,7 +146,7 @@ enum SortBy: string
         });
 
         if ($sortOrder === SortOrder::Desc) {
-            $array = array_reverse($array);
+            $rows = array_reverse($rows);
         }
     }
 }
