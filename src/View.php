@@ -2,28 +2,9 @@
 
 namespace XES\CodeChallenge\View;
 
-use ArrayAccess;
 use XES\CodeChallenge\Model\Country;
 use XES\CodeChallenge\Model\SearchBy;
 
-enum FilterBy: string
-{
-    case PopulationIsGreaterThan10M = "pop_gt_10m";
-    case StartOfWeekIsSunday = "start_of_wk_sun";
-}
-
-enum SortBy: string
-{
-    case Name = "name";
-    case Population = "population";
-    case Region = "region";
-}
-
-enum SortOrder: string
-{
-    case Asc = "asc";
-    case Desc = "desc";
-}
 
 class CountrySearchInput
 {
@@ -32,6 +13,17 @@ class CountrySearchInput
     public function isSearchingBy(SearchBy $searchBy): bool
     {
         return in_array($searchBy, $this->searchingBy);
+    }
+}
+
+
+class CountryRow 
+{
+    public function __construct(public readonly Country $country, public readonly array $filteringBy = []) { }
+
+    public function isFilteredOut(): bool
+    {
+        return $this->filteringBy != [] && in_array(false, array_map(fn($filterBy) => $filterBy->filters($this), $this->filteringBy));
     }
 }
 
@@ -48,26 +40,10 @@ class CountryTable
             return $this->rows;
         }
 
-        $this->rows = array_map(fn($country) => [
-            'name' => $country->getName(),
-            'population' => $country->getPopulation(),
-            'region' => $country->getRegion(),
-            'subregion' => $country->getSubregion(),
-            'currency' => $country->getCurrency(),
-            'flag' => $country->getFlag(),
-            'isFilteredOut' => $this->isFilteredOut($country)
-        ], $this->countries);
+        $this->rows = array_map(fn($country) => new CountryRow($country, $this->filteringBy), $this->countries);
 
         if ($this->sortBy) {
-            usort($this->rows,  fn($a, $b) => match ($this->sortBy) {
-                SortBy::Name => strcmp($a['name'], $b['name']),
-                SortBy::Population => $a['population'] - $b['population'],
-                SortBy::Region => $a['region'] !== $b['region'] ? strcmp($a['region'], $b['region']) : strcmp($a['subregion'], $b['subregion'])
-            });
-        }
-
-        if ($this->sortOrder === SortOrder::Desc) {
-            $this->rows = array_reverse($this->rows);
+            $this->sortBy->sort($this->rows, $this->sortOrder ?? SortOrder::Asc);
         }
 
         return $this->rows;
@@ -80,16 +56,7 @@ class CountryTable
 
     public function getFilteredRows(): array 
     {
-        return array_filter($this->getRows(), fn($row) => !$row['isFilteredOut']);
-    }
-
-    public function isFilteredOut(Country $country): bool
-    {
-        return $this->filteringBy != [] && in_array(false, array_map(fn($filterBy) => match ($filterBy) {
-            FilterBy::PopulationIsGreaterThan10M => (int)$country->getPopulation() > 10_000_000,
-            FilterBy::StartOfWeekIsSunday => strtolower($country->getStartOfWeek()) == "sunday", 
-            default => true
-        }, $this->filteringBy));
+        return array_filter($this->getRows(), fn($row) => !$row->isFilteredOut());
     }
 
     public function getRowCount(): int
@@ -114,7 +81,59 @@ class CountryTable
 }
 
 
-class HighlightedText implements ArrayAccess
+enum FilterBy: string
+{
+    case PopulationIsGreaterThan10M = "pop_gt_10m";
+    case StartOfWeekIsSunday = "start_of_wk_sun";
+
+    public static function tryFromArray(array $values): ?array 
+    {
+        $filteringBy = array_filter(array_map(fn($f) => self::tryFrom($f), $values), fn($f) => $f != null);
+        return $filteringBy !== [] ? $filteringBy : null;
+    }
+
+    public function filters(CountryRow $row): bool
+    {
+        return match ($this) {
+            FilterBy::PopulationIsGreaterThan10M => (int)$row->country->getPopulation() > 10_000_000,
+            FilterBy::StartOfWeekIsSunday => strtolower($row->country->getStartOfWeek()) == "sunday", 
+            default => true
+        };
+    }
+}
+
+
+enum SortOrder: string
+{
+    case Asc = "asc";
+    case Desc = "desc";
+}
+
+
+enum SortBy: string
+{
+    case Name = "name";
+    case Population = "population";
+    case Region = "region";
+
+    public function sort(array &$array, SortOrder $sortOrder = SortOrder::Asc): void
+    {
+        usort($array,  fn($a, $b) => match ($this) {
+            SortBy::Name => strcmp($a->country->getName(), $b->country->getName()),
+            SortBy::Population => $a->country->getPopulation() - $b->country->getPopulation(),
+            SortBy::Region => $a->country->getRegion() !== $b->country->getRegion() 
+                ? strcmp($a->country->getRegion(), $b->country->getRegion()) 
+                : strcmp($a->country->getSubregion(), $b->country->getSubregion())
+        });
+
+        if ($sortOrder === SortOrder::Desc) {
+            $array = array_reverse($array);
+        }
+    }
+}
+
+
+class HighlightedText implements \ArrayAccess
 {
     public readonly bool $isHighlighted;
 

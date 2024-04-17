@@ -17,17 +17,18 @@ use XES\CodeChallenge\View\SortBy;
 use const XES\CodeChallenge\Model\DEFAULT_SEARCH_BY;
 
 $term = @trim($_GET['q']);
-$filteringBy = array_filter(array_map(fn($f) => FilterBy::tryFrom($f), @$_GET["f"] ?? []), fn($f) => $f != null);
-$searchingBy = array_filter(array_map(fn($s) => SearchBy::tryFrom($s), @$_GET['s'] ?? array_map(fn($by) => $by->value, DEFAULT_SEARCH_BY)), fn($by) => $by != null);
+$filteringBy = FilterBy::tryFromArray(@$_GET["f"] ?? []) ?? [];
+$searchingBy = SearchBy::tryFromArray(@$_GET['s'] ?? []) ?? DEFAULT_SEARCH_BY;
 $sortBy = SortBy::tryFrom(@$_GET["t"]) ?? SortBy::Name;
 $sortOrder = SortOrder::tryFrom(@$_GET["o"]) ?? SortOrder::Asc;
 $useCustomSearch = (bool)@$_GET['c'];
 
-$client = new Client();
-$countries = match ($useCustomSearch) {
-    true => (new Countries($client->all()))->search($term, $searchingBy),
-    false => $client->search($term, $searchingBy)
+$searchClient = match ($useCustomSearch) {
+    true => new Countries(new Client()),
+    false => new Client()
 };
+
+$countries = $searchClient->search($term, $searchingBy);
 
 $input = new CountrySearchInput($term, $searchingBy, $useCustomSearch);
 $tbl = new CountryTable($countries, $filteringBy, $sortBy, $sortOrder);
@@ -142,23 +143,23 @@ $tbl = new CountryTable($countries, $filteringBy, $sortBy, $sortOrder);
             </thead>
             <tbody>
                 <?php foreach ($tbl->getFilteredRows() as $row): 
-                    $name = new HighlightedText($row['name'], $input->term);
-                    $region = new HighlightedText($row['region'], $input->term);
-                    $subregion = new HighlightedText($row['subregion'], $input->term);
+                    $name = new HighlightedText($row->country->getName(), $input->term);
+                    $region = new HighlightedText($row->country->getRegion(), $input->term);
+                    $subregion = new HighlightedText($row->country->getSubregion(), $input->term);
                 ?>
                     <tr>
                         <td>
                             <?=$name[0]?><span class="highlight"><?=$name[1]?></span><?=$name[2]?>
                         </td>
-                        <td><?=$row['population']?></td>
+                        <td><?=$row->country->getPopulation()?></td>
                         <td>
                             <?=$region[0]?><span class="highlight"><?=$region[1]?></span><?=$region[2]?>
                         </td>
                         <td>
                             <?=$subregion[0]?><span class="highlight"><?=$subregion[1]?></span><?=$subregion[2]?>
                         </td>
-                        <td><?=$row['currency']?></td>
-                        <td><img src="<?=$row['flag']['src']?>" alt="<?=$row['flag']['alt']?>"/></td>
+                        <td><?=$row->country->getCurrency()?></td>
+                        <td><img src="<?=$row->country->getFlag()['src']?>" alt="<?=$row->country->getFlag()['alt']?>"/></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

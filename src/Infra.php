@@ -3,12 +3,13 @@
 namespace XES\CodeChallenge\Infra\RESTCountriesAPI;
 
 use XES\CodeChallenge\Model\Country;
+use XES\CodeChallenge\Model\ReadOnlyCountries;
 use XES\CodeChallenge\Model\SearchBy;
 use XES\CodeChallenge\Model\SearchesCountries;
 
 use const XES\CodeChallenge\Model\DEFAULT_SEARCH_BY;
 
-class Client implements SearchesCountries
+class Client implements ReadOnlyCountries, SearchesCountries
 {
     public const SEARCH_FIELDS = ['name', 'population', 'region', 'subregion', 'currencies', 'flags', 'startOfWeek', 'cca2', 'ccn3', 'cca3', 'cioc'];
 
