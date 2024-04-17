@@ -39,6 +39,7 @@ interface SearchesCountries
     /**
      * @param string $term Search term
      * @param SearchBy[] $searchingBy A list of search by criteria
+     * @return Country[] Results
      */
     public function search(string $term, array $searchingBy = DEFAULT_SEARCH_BY): array;
 }
@@ -46,6 +47,9 @@ interface SearchesCountries
 
 interface ReadOnlyCountries
 {
+    /**
+     * @return Country[] Results
+     */
     public function all(): array;
 }
 

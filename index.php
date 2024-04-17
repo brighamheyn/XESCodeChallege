@@ -5,6 +5,8 @@ include 'src/Infra.php';
 include 'src/View.php';
 
 use XES\CodeChallenge\Infra\RESTCountriesAPI\Client as RESTCountriesAPI;
+use XES\CodeChallenge\Model\ReadOnlyCountries;
+use XES\CodeChallenge\Model\SearchesCountries;
 use XES\CodeChallenge\Model\CustomSearch;
 use XES\CodeChallenge\Model\SearchBy;
 use XES\CodeChallenge\View\FilterBy;
@@ -24,8 +26,10 @@ $sortBy = SortBy::tryFrom(@$_GET["t"]) ?? SortBy::Name;
 $sortOrder = SortOrder::tryFrom(@$_GET["o"]) ?? SortOrder::Asc;
 $searchType = SearchType::tryFrom(@$_GET['c']) ?? SearchType::API;
 
+/** @var ReadOnlyCountries */
 $countries = new RESTCountriesAPI();
 
+/** @var SearchesCountries */
 $searchClient = match ($searchType) {
     SearchType::Custom => new CustomSearch($countries->all()),
     SearchType::API => $countries
