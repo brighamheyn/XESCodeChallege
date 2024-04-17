@@ -105,6 +105,9 @@ $tbl = new CountryTable($searchResults, $filteringBy, $sortBy, $sortOrder);
 
                 <input type="checkbox" name="f[]" value="<?=FilterBy::StartOfWeekIsSunday->value?>" <?=$tbl->isFilteringBy(FilterBy::StartOfWeekIsSunday) ? "checked" : ""?>/>
                 <label>Starts week on Sunday</label>
+
+                <input type="checkbox" name="f[]" value="<?=FilterBy::DrivesOnRightSideOfRoad->value?>" <?=$tbl->isFilteringBy(FilterBy::DrivesOnRightSideOfRoad) ? "checked" : ""?>/>
+                <label>Drives on the Right</label>
             </fieldset>
 
             <fieldset> 

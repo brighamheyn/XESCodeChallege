@@ -11,7 +11,7 @@ use const XES\CodeChallenge\Model\DEFAULT_SEARCH_BY;
 
 class Client implements ReadOnlyCountries, SearchesCountries
 {
-    public const SEARCH_FIELDS = ['name', 'population', 'region', 'subregion', 'currencies', 'flags', 'startOfWeek', 'cca2', 'ccn3', 'cca3', 'cioc'];
+    public const SEARCH_FIELDS = ['name', 'population', 'region', 'subregion', 'currencies', 'flags', 'startOfWeek', 'cca2', 'ccn3', 'cca3', 'cioc', 'car'];
 
     public function all(): array 
     {
@@ -112,6 +112,11 @@ class CountryAdapter implements Country
     public function getStartOfWeek(): string
     {
         return (string)@$this->country['startOfWeek'];
+    }
+
+    public function getDrivesOnSide(): string
+    {
+        return (string)@$this->country['car']['side'];
     }
 }
 

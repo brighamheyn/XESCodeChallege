@@ -100,7 +100,8 @@ class CountryTable
 enum FilterBy: string
 {
     case PopulationIsGreaterThan10M = "pop_gt_10m";
-    case StartOfWeekIsSunday = "start_of_wk_sun";
+    case StartOfWeekIsSunday = "strt_of_wk_sun";
+    case DrivesOnRightSideOfRoad = "drvs_on_rgt";
 
     public static function tryFromArray(array $values): ?array 
     {
@@ -113,6 +114,7 @@ enum FilterBy: string
         return match ($this) {
             FilterBy::PopulationIsGreaterThan10M => (int)$row->country->getPopulation() > 10_000_000,
             FilterBy::StartOfWeekIsSunday => strtolower($row->country->getStartOfWeek()) == "sunday", 
+            FilterBy::DrivesOnRightSideOfRoad => strtolower($row->country->getDrivesOnSide()) == "right",
             default => true
         };
     }
