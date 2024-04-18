@@ -5,12 +5,11 @@ include 'src/Infra.php';
 include 'src/View.php';
 
 use XES\CodeChallenge\Infra\RESTCountriesAPI\Client as RESTCountriesAPI;
-use XES\CodeChallenge\Model\ReadOnlyCountries;
+use XES\CodeChallenge\Infra\RESTCountriesAPI\InMemorySearch;
 use XES\CodeChallenge\Model\SearchesCountries;
-use XES\CodeChallenge\Model\CustomSearch;
-use XES\CodeChallenge\Model\SearchType;
 use XES\CodeChallenge\Model\SearchBy;
 use XES\CodeChallenge\Model\SearchParameters;
+use XES\CodeChallenge\View\SearchType;
 use XES\CodeChallenge\View\FilterBy;
 use XES\CodeChallenge\View\CountryTable;
 use XES\CodeChallenge\View\HighlightedText;
@@ -25,20 +24,20 @@ $searchingBy = SearchBy::tryFromArray(@$_GET['s'] ?? []) ?? SearchParameters::DE
 $ignoreCase = isset($_GET['i']) ? (bool)@$_GET['i'] : true;
 $sortBy = SortBy::tryFrom(@$_GET["t"]) ?? SortBy::Name;
 $sortOrder = SortOrder::tryFrom(@$_GET["o"]) ?? SortOrder::Asc;
-$searchType = SearchType::tryFrom(@$_GET['c']) ?? SearchType::API;
+$searchType = SearchType::tryFrom(@$_GET['c']) ?? SearchType::RESTCountriesAPI;
 
 
-/** @var ReadOnlyCountries */
-$countries = new RESTCountriesAPI();
+$api = new RESTCountriesAPI();
 
 /** @var SearchesCountries */
 $searchClient = match ($searchType) {
-    SearchType::Custom => new CustomSearch($countries->all()),
-    SearchType::API => $countries
+    SearchType::InMemory => new InMemorySearch($api->all()),
+    SearchType::RESTCountriesAPI => $api
 };
 
+$params = new SearchParameters($searchingBy, $ignoreCase);
 
-$params = new SearchParameters($searchingBy, $searchType, $ignoreCase);
+
 $searchResults = $searchClient->search($term, $params);
 
 
@@ -86,10 +85,10 @@ $tbl = new CountryTable($searchResults);
             <fieldset>
                 <legend>Search Type</legend>
 
-                <input type="radio" name="c" value="<?=SearchType::API->value?>" <?=$params->isSearchingType(SearchType::API) ? "checked": "" ?> />
+                <input type="radio" name="c" value="<?=SearchType::RESTCountriesAPI->value?>" <?=$searchType == SearchType::RESTCountriesAPI ? "checked": "" ?> />
                 <label for="c">API</label>
 
-                <input type="radio" name="c" value="<?=SearchType::Custom->value?>" <?=$params->isSearchingType(SearchType::Custom) ? "checked": "" ?> />
+                <input type="radio" name="c" value="<?=SearchType::InMemory->value?>" <?=$searchType == SearchType::InMemory ? "checked": "" ?> />
                 <label for="c">Custom</label>
             </fieldset>
 

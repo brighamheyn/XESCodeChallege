@@ -3,14 +3,11 @@
 namespace XES\CodeChallenge\Infra\RESTCountriesAPI;
 
 use XES\CodeChallenge\Model\Country;
-use XES\CodeChallenge\Model\ReadOnlyCountries;
 use XES\CodeChallenge\Model\SearchBy;
 use XES\CodeChallenge\Model\SearchesCountries;
 use XES\CodeChallenge\Model\SearchParameters;
 
-use const XES\CodeChallenge\Model\DEFAULT_SEARCH_BY;
-
-class Client implements ReadOnlyCountries, SearchesCountries
+class Client implements SearchesCountries
 {
     public const SEARCH_FIELDS = ['name', 'population', 'region', 'subregion', 'currencies', 'flags', 'startOfWeek', 'cca2', 'ccn3', 'cca3', 'cioc', 'car'];
 
@@ -119,6 +116,34 @@ class CountryAdapter implements Country
     public function getDrivesOnSide(): string
     {
         return (string)@$this->country['car']['side'];
+    }
+}
+
+
+class InMemorySearch implements SearchesCountries
+{   
+    /**
+     * @param Country[] $countries
+     */
+    public function __construct(private readonly array $countries = []) { }
+
+    /**
+     * @return Country[] Results
+     */
+    public function search(string $term, SearchParameters $params): array
+    {   
+        return array_filter($this->countries, fn($country) => $this->matches($country, $term, $params));
+    }
+
+    private function matches(Country $country, string $term, SearchParameters $params): bool
+    {
+        return in_array(true, array_map(fn($searchBy) => match ($searchBy) {
+            SearchBy::Name => str_contains($params->getCleansedTerm($country->getName()), $params->getCleansedTerm($term)),
+            SearchBy::Codes => str_contains($params->getCleansedTerm(join("", $country->getCodes())), $params->getCleansedTerm($term)),
+            SearchBy::Currency => str_contains($params->getCleansedTerm($country->getCurrency()), $params->getCleansedTerm($term)),
+            SearchBy::Region => str_contains($params->getCleansedTerm($country->getRegion()), $params->getCleansedTerm($term)) 
+                || str_contains($params->getCleansedTerm($country->getSubregion()), $params->getCleansedTerm($term))
+        }, $params->searchingBy));
     }
 }
 

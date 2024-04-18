@@ -3,9 +3,14 @@
 namespace XES\CodeChallenge\View;
 
 use XES\CodeChallenge\Model\Country;
-use XES\CodeChallenge\Model\SearchType;
-use XES\CodeChallenge\Model\SearchBy;
-use XES\CodeChallenge\Model\SearchParameters;
+
+
+enum SearchType: string
+{
+    case RESTCountriesAPI = "rest_countries";
+    case InMemory = "in_memory";
+}
+
 
 enum FilterBy: string
 {

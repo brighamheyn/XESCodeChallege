@@ -3,13 +3,6 @@
 namespace XES\CodeChallenge\Model;
 
 
-enum SearchType: string
-{
-    case API = "api";
-    case Custom = "custom";
-}
-
-
 enum SearchBy: string
 {
     case Name = "name";
@@ -29,9 +22,11 @@ class SearchParameters
 {
     const DEFAULT_SEARCH_BY = [SearchBy::Name, SearchBy::Codes, SearchBy::Currency];
 
+    /**
+     * @param SearchBy[] $searchingBy
+     */
     public function __construct(
         public readonly array $searchingBy = DEFAULT_SEARCH_BY, 
-        public readonly SearchType $searchType = SearchType::API, 
         public readonly bool $ignoreCase = true
     ) { }
 
@@ -43,11 +38,6 @@ class SearchParameters
     public function isSearchingBy(SearchBy $searchBy): bool
     {
         return in_array($searchBy, $this->searchingBy);
-    }
-
-    public function isSearchingType(SearchType $searchType): bool
-    {
-        return $this->searchType == $searchType;
     }
 }
 
@@ -76,36 +66,4 @@ interface SearchesCountries
 }
 
 
-interface ReadOnlyCountries
-{
-    /**
-     * @return Country[] Results
-     */
-    public function all(): array;
-}
 
-
-class CustomSearch implements SearchesCountries
-{   
-    /**
-     * @param Country[] $countries
-     */
-    public function __construct(private readonly array $countries = []) { }
-
-    
-    public function search(string $term, SearchParameters $params): array
-    {   
-        return array_filter($this->countries, fn($country) => $this->matches($country, $term, $params));
-    }
-
-    private function matches(Country $country, string $term, SearchParameters $params): bool
-    {
-        return in_array(true, array_map(fn($searchBy) => match ($searchBy) {
-            SearchBy::Name => str_contains($params->getCleansedTerm($country->getName()), $params->getCleansedTerm($term)),
-            SearchBy::Codes => str_contains($params->getCleansedTerm(join("", $country->getCodes())), $params->getCleansedTerm($term)),
-            SearchBy::Currency => str_contains($params->getCleansedTerm($country->getCurrency()), $params->getCleansedTerm($term)),
-            SearchBy::Region => str_contains($params->getCleansedTerm($country->getRegion()), $params->getCleansedTerm($term)) 
-                || str_contains($params->getCleansedTerm($country->getSubregion()), $params->getCleansedTerm($term))
-        }, $params->searchingBy));
-    }
-}
