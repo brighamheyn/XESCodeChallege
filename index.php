@@ -16,6 +16,8 @@ use XES\CodeChallenge\View\HighlightedText;
 use XES\CodeChallenge\View\SearchType;
 use XES\CodeChallenge\View\SortOrder;
 use XES\CodeChallenge\View\SortBy;
+use XES\CodeChallenge\View\TableFilters;
+use XES\CodeChallenge\View\TableSorter;
 
 use const XES\CodeChallenge\Model\DEFAULT_SEARCH_BY;
 
@@ -38,7 +40,9 @@ $searchClient = match ($searchType) {
 $searchResults = $searchClient->search($term, $searchingBy);
 
 $input = new CountrySearchInput($term, $searchingBy, $searchType);
-$tbl = new CountryTable($searchResults, $filteringBy, $sortBy, $sortOrder);
+$filters = new TableFilters($filteringBy);
+$sorter = new TableSorter($sortBy, $sortOrder);
+$tbl = new CountryTable($searchResults);
 
 ?>
 
@@ -100,34 +104,34 @@ $tbl = new CountryTable($searchResults, $filteringBy, $sortBy, $sortOrder);
             <fieldset> 
                 <legend>Filter By </legend>
 
-                <input type="checkbox" name="f[]" value="<?=FilterBy::PopulationIsGreaterThan10M->value?>" <?=$tbl->isFilteringBy(FilterBy::PopulationIsGreaterThan10M) ? "checked" : ""?>/>
+                <input type="checkbox" name="f[]" value="<?=FilterBy::PopulationIsGreaterThan10M->value?>" <?=$filters->isFilteringBy(FilterBy::PopulationIsGreaterThan10M) ? "checked" : ""?>/>
                 <label>Population > 10m</label>
 
-                <input type="checkbox" name="f[]" value="<?=FilterBy::StartOfWeekIsSunday->value?>" <?=$tbl->isFilteringBy(FilterBy::StartOfWeekIsSunday) ? "checked" : ""?>/>
+                <input type="checkbox" name="f[]" value="<?=FilterBy::StartOfWeekIsSunday->value?>" <?=$filters->isFilteringBy(FilterBy::StartOfWeekIsSunday) ? "checked" : ""?>/>
                 <label>Starts week on Sunday</label>
 
-                <input type="checkbox" name="f[]" value="<?=FilterBy::DrivesOnRightSideOfRoad->value?>" <?=$tbl->isFilteringBy(FilterBy::DrivesOnRightSideOfRoad) ? "checked" : ""?>/>
+                <input type="checkbox" name="f[]" value="<?=FilterBy::DrivesOnRightSideOfRoad->value?>" <?=$filters->isFilteringBy(FilterBy::DrivesOnRightSideOfRoad) ? "checked" : ""?>/>
                 <label>Drives on the Right</label>
             </fieldset>
 
             <fieldset> 
                 <legend>Sort By</legend>
 
-                <input type="radio" name="t" value="<?=SortBy::Name->value?>" <?=$tbl->isSortingBy(SortBy::Name) ? "checked" : ""?>/>
+                <input type="radio" name="t" value="<?=SortBy::Name->value?>" <?=$sorter->isSortingBy(SortBy::Name) ? "checked" : ""?>/>
                 <label>Name</label>
 
-                <input type="radio" name="t" value="<?=SortBy::Population->value?>" <?=$tbl->isSortingBy(SortBy::Population) ? "checked" : ""?>/>
+                <input type="radio" name="t" value="<?=SortBy::Population->value?>" <?=$sorter->isSortingBy(SortBy::Population) ? "checked" : ""?>/>
                 <label>Population</label>
 
-                <input type="radio" name="t" value="<?=SortBy::Region->value?>" <?=$tbl->isSortingBy(SortBy::Region) ? "checked" : ""?>/>
+                <input type="radio" name="t" value="<?=SortBy::Region->value?>" <?=$sorter->isSortingBy(SortBy::Region) ? "checked" : ""?>/>
                 <label>Region</label>
 
-                <span> |</span>
+                <span>|</span>
 
-                <input type="radio" name="o" value="asc" <?=$tbl->sortOrder == SortOrder::Asc ? "checked": "" ?> />
+                <input type="radio" name="o" value="asc" <?=$sorter->sortOrder == SortOrder::Asc ? "checked": "" ?> />
                 <label>ASC</label>
 
-                <input type="radio" name="o" value="desc" <?=$tbl->sortOrder == SortOrder::Desc ? "checked": "" ?> />
+                <input type="radio" name="o" value="desc" <?=$sorter->sortOrder == SortOrder::Desc ? "checked": "" ?> />
                 <label>DESC</label>
             </fieldset>
         </form>
@@ -139,8 +143,8 @@ $tbl = new CountryTable($searchResults, $filteringBy, $sortBy, $sortOrder);
             <thead>
                 <tr>
                     <th colspan="1">Total = <?=$tbl->getRowCount()?></th>
-                    <th colspan="2">Showing = <?=$tbl->getFilteredRowCount()?></th>
-                    <th colspan="2">Hidden = <?=$tbl->getFilteredOutRowCount()?></th>
+                    <th colspan="2">Showing = <?=$filters->getFilteredRowCount($tbl->getRows())?></th>
+                    <th colspan="2">Hidden = <?=$filters->getFilteredOutRowCount($tbl->getRows())?></th>
                 </tr>
                 <tr>
                     <th>Country name</th>
@@ -152,7 +156,7 @@ $tbl = new CountryTable($searchResults, $filteringBy, $sortBy, $sortOrder);
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($tbl->getFilteredRows() as $row): 
+                <?php foreach ($sorter->getSortedRows($filters->getFilteredRows($tbl->getRows())) as $row): 
                     $name = new HighlightedText($row->country->getName(), $input->term);
                     $region = new HighlightedText($row->country->getRegion(), $input->term);
                     $subregion = new HighlightedText($row->country->getSubregion(), $input->term);

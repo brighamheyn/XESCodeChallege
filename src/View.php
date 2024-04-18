@@ -13,6 +13,117 @@ enum SearchType: string
 }
 
 
+enum FilterBy: string
+{
+    case PopulationIsGreaterThan10M = "pop_gt_10m";
+    case StartOfWeekIsSunday = "strt_of_wk_sun";
+    case DrivesOnRightSideOfRoad = "drvs_on_rgt";
+
+    public static function tryFromArray(array $values): ?array 
+    {
+        $filteringBy = array_filter(array_map(fn($f) => self::tryFrom($f), $values), fn($f) => $f != null);
+        return $filteringBy !== [] ? $filteringBy : null;
+    }
+}
+
+
+class TableFilters 
+{
+    public function __construct(public readonly array $filteringBy = []) { }
+
+    public function isFilteredBy(CountryRow $row): bool
+    {
+        return in_array(false, array_map(
+            fn($filterBy)=> match ($filterBy) {
+                FilterBy::PopulationIsGreaterThan10M => (int)$row->country->getPopulation() > 10_000_000,
+                FilterBy::StartOfWeekIsSunday => strtolower($row->country->getStartOfWeek()) == "sunday", 
+                FilterBy::DrivesOnRightSideOfRoad => strtolower($row->country->getDrivesOnSide()) == "right",
+                default => true
+            }, 
+        $this->filteringBy));
+    }
+
+    public function isFilteringBy(FilterBy $filterBy): bool
+    {
+        return in_array($filterBy, $this->filteringBy);
+    }
+
+    /**
+     * @param Country[] $rows
+     */
+    public function getFilteredRows(array $rows): array 
+    {
+        return array_filter($rows, fn($row) => !$row->isFilteredOut($this));
+    }
+
+    /**
+     * @param Country[] $rows
+     */
+    public function getFilteredRowCount(array $rows): int
+    {
+        return count($this->getFilteredRows($rows));
+    }
+
+    /**
+     * @param Country[] $rows
+     */
+    public function getFilteredOutRowCount(array $rows): int
+    {
+        return count($rows) - $this->getFilteredRowCount($rows);
+    }
+}
+
+
+enum SortOrder: string
+{
+    case Asc = "asc";
+    case Desc = "desc";
+}
+
+
+enum SortBy: string
+{
+    case Name = "name";
+    case Population = "population";
+    case Region = "region";
+}
+
+
+class TableSorter 
+{
+    public function __construct(public readonly ?SortBy $sortBy = null, public readonly ?SortOrder $sortOrder = null) { }
+
+    /**
+     * @param Country[] $rows
+     */
+    public function getSortedRows(array $rows): array
+    {
+        $rows = [...$rows];
+        usort($rows,  fn($a, $b) => match ($this->sortBy) {
+            SortBy::Name => strcmp($a->country->getName(), $b->country->getName()),
+            SortBy::Population => $a->country->getPopulation() - $b->country->getPopulation(),
+            SortBy::Region => $a->country->getRegion() !== $b->country->getRegion() 
+                ? strcmp($a->country->getRegion(), $b->country->getRegion()) 
+                : strcmp($a->country->getSubregion(), $b->country->getSubregion()),
+            default => 0
+        });
+
+        $rows = match ($this->sortOrder) {
+            SortOrder::Asc => $rows,
+            SortOrder::Desc => array_reverse($rows),
+            default => $rows
+        };
+
+        return $rows;
+    }
+
+    public function isSortingBy(SortBy $sortBy): bool
+    {
+        return $this->sortBy == $sortBy;
+    }
+}
+
+
 class CountrySearchInput
 {
     public function __construct(public readonly string $term = "", public readonly array $searchingBy = [], public readonly SearchType $searchType = SearchType::API) { }
@@ -31,11 +142,11 @@ class CountrySearchInput
 
 class CountryRow 
 {
-    public function __construct(public readonly Country $country, public readonly array $filteringBy = []) { }
+    public function __construct(public readonly CountryTable $table, public readonly Country $country) { }
 
-    public function isFilteredOut(): bool
+    public function isFilteredOut(TableFilters $filters): bool
     {
-        return $this->filteringBy != [] && in_array(false, array_map(fn($filterBy) => $filterBy->filters($this), $this->filteringBy));
+        return $filters->isFilteredBy($this);
     }
 }
 
@@ -48,108 +159,48 @@ class CountryTable
      * @param Country[] $countries
      * @param FilterBy[] $filteringBy
      */
-    public function __construct(private readonly array $countries, public readonly array $filteringBy = [], public readonly ?SortBy $sortBy = null, public readonly ?SortOrder $sortOrder = null) { } 
+    public function __construct(
+        private readonly array $countries,
+        public readonly ?TableSorter $sorter = null,
+    ) { } 
 
     public function getRows(): array
     {
+        // memoize
         if ($this->rows) {
             return $this->rows;
         }
 
-        $this->rows = array_map(fn($country) => new CountryRow($country, $this->filteringBy), $this->countries);
+        $this->rows = array_map(fn($country, $i) => new CountryRow($this, $country), $this->countries, array_keys($this->countries));
 
-        if ($this->sortBy) {
-            $this->sortBy->sort($this->rows, $this->sortOrder ?? SortOrder::Asc);
-        }
+        $this->sortRows();
 
         return $this->rows;
-    }
-
-    public function isFilteringBy(FilterBy $filterBy): bool
-    {
-        return in_array($filterBy, $this->filteringBy);
-    }
-
-    public function getFilteredRows(): array 
-    {
-        return array_filter($this->getRows(), fn($row) => !$row->isFilteredOut());
     }
 
     public function getRowCount(): int
     {
         return count($this->getRows());
     }
-
-    public function getFilteredRowCount(): int
+    
+    private function sortRows(): array
     {
-        return count($this->getFilteredRows());
-    }
-
-    public function getFilteredOutRowCount(): int
-    {
-        return $this->getRowCount() - $this->getFilteredRowCount();
-    }
-
-    public function isSortingBy(SortBy $sortBy): bool
-    {
-        return $this->sortBy == $sortBy;
-    }
-}
-
-
-enum FilterBy: string
-{
-    case PopulationIsGreaterThan10M = "pop_gt_10m";
-    case StartOfWeekIsSunday = "strt_of_wk_sun";
-    case DrivesOnRightSideOfRoad = "drvs_on_rgt";
-
-    public static function tryFromArray(array $values): ?array 
-    {
-        $filteringBy = array_filter(array_map(fn($f) => self::tryFrom($f), $values), fn($f) => $f != null);
-        return $filteringBy !== [] ? $filteringBy : null;
-    }
-
-    public function filters(CountryRow $row): bool
-    {
-        return match ($this) {
-            FilterBy::PopulationIsGreaterThan10M => (int)$row->country->getPopulation() > 10_000_000,
-            FilterBy::StartOfWeekIsSunday => strtolower($row->country->getStartOfWeek()) == "sunday", 
-            FilterBy::DrivesOnRightSideOfRoad => strtolower($row->country->getDrivesOnSide()) == "right",
-            default => true
-        };
-    }
-}
-
-
-enum SortOrder: string
-{
-    case Asc = "asc";
-    case Desc = "desc";
-}
-
-
-enum SortBy: string
-{
-    case Name = "name";
-    case Population = "population";
-    case Region = "region";
-
-    /**
-     * @param CountryRow[] $rows
-     */
-    public function sort(array &$rows, SortOrder $sortOrder = SortOrder::Asc): void
-    {
-        usort($rows,  fn($a, $b) => match ($this) {
+        usort($this->rows,  fn($a, $b) => match ($this->sorter->sortBy) {
             SortBy::Name => strcmp($a->country->getName(), $b->country->getName()),
             SortBy::Population => $a->country->getPopulation() - $b->country->getPopulation(),
             SortBy::Region => $a->country->getRegion() !== $b->country->getRegion() 
                 ? strcmp($a->country->getRegion(), $b->country->getRegion()) 
-                : strcmp($a->country->getSubregion(), $b->country->getSubregion())
+                : strcmp($a->country->getSubregion(), $b->country->getSubregion()),
+            default => 0
         });
 
-        if ($sortOrder === SortOrder::Desc) {
-            $rows = array_reverse($rows);
-        }
+        $this->rows = match ($this->sorter->sortOrder) {
+            SortOrder::Asc => $this->rows,
+            SortOrder::Desc => array_reverse($this->rows),
+            default => $this->rows
+        };
+
+        return $this->rows;
     }
 }
 
