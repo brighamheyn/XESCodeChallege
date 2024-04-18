@@ -12,7 +12,6 @@ use XES\CodeChallenge\Model\SearchType;
 use XES\CodeChallenge\Model\SearchBy;
 use XES\CodeChallenge\Model\SearchParameters;
 use XES\CodeChallenge\View\FilterBy;
-use XES\CodeChallenge\View\CountrySearchInput;
 use XES\CodeChallenge\View\CountryTable;
 use XES\CodeChallenge\View\HighlightedText;
 use XES\CodeChallenge\View\SortOrder;
