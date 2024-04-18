@@ -114,6 +114,9 @@ class TableSorter
             default => $rows
         };
 
+        // reindex
+        $rows = array_map(fn($row, $i) => $row->reIndex($i), $rows, array_keys($rows));
+
         return $rows;
     }
 
@@ -142,11 +145,16 @@ class CountrySearchInput
 
 class CountryRow 
 {
-    public function __construct(public readonly CountryTable $table, public readonly Country $country) { }
+    public function __construct(public readonly CountryTable $table, public readonly Country $country, public readonly int $index) { }
 
     public function isFilteredOut(TableFilters $filters): bool
     {
         return $filters->isFilteredBy($this);
+    }
+
+    public function reIndex(int $index): self
+    {
+        return new self($this->table, $this->country, $index);
     }
 }
 
@@ -168,7 +176,7 @@ class CountryTable
             return $this->rows;
         }
 
-        $this->rows = array_map(fn($country, $i) => new CountryRow($this, $country), $this->countries, array_keys($this->countries));
+        $this->rows = array_map(fn($country, $i) => new CountryRow($this, $country, $i), $this->countries, array_keys($this->countries));
 
         return $this->rows;
     }

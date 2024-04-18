@@ -142,7 +142,7 @@ $tbl = new CountryTable($searchResults);
         <table>
             <thead>
                 <tr>
-                    <th colspan="1">Total = <?=$tbl->getRowCount()?></th>
+                    <th colspan="2">Total = <?=$tbl->getRowCount()?></th>
                     <th colspan="2">Showing = <?=$filters->getFilteredRowCount($tbl->getRows())?></th>
                     <th colspan="2">Hidden = <?=$filters->getFilteredOutRowCount($tbl->getRows())?></th>
                 </tr>
@@ -163,6 +163,7 @@ $tbl = new CountryTable($searchResults);
                 ?>
                     <tr>
                         <td>
+                            <span><?=$row->index + 1?>.</span>
                             <?=$name[0]?><span class="highlight"><?=$name[1]?></span><?=$name[2]?>
                         </td>
                         <td><?=$row->country->getPopulation()?></td>
