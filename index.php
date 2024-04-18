@@ -22,7 +22,7 @@ use XES\CodeChallenge\View\TableSorter;
 $term = @trim($_GET['q']);
 $filteringBy = FilterBy::tryFromArray(@$_GET["f"] ?? []) ?? [];
 $searchingBy = SearchBy::tryFromArray(@$_GET['s'] ?? []) ?? SearchParameters::DEFAULT_SEARCH_BY;
-$ignoreCase = isset($_GET['i']) && (bool)@$_GET['i'];
+$ignoreCase = isset($_GET['i']) ? (bool)@$_GET['i'] : true;
 $sortBy = SortBy::tryFrom(@$_GET["t"]) ?? SortBy::Name;
 $sortOrder = SortOrder::tryFrom(@$_GET["o"]) ?? SortOrder::Asc;
 $searchType = SearchType::tryFrom(@$_GET['c']) ?? SearchType::API;
@@ -79,7 +79,8 @@ $tbl = new CountryTable($searchResults);
             <input type="search" name="q" placeholder="" value="<?=$term?>" />
             <input type="submit" value="Search" />
 
-            <input type="checkbox" name="i" value="1" <?=$params->ignoreCase ? "checked": "" ?> />            
+            <input type="hidden" name="i" value="0" /> 
+            <input type="checkbox" name="i" value="1" <?=$params->ignoreCase ? "checked": "" ?> />          
             <label for="i">Ignore case?</label>
 
             <fieldset>
