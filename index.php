@@ -8,25 +8,26 @@ use XES\CodeChallenge\Infra\RESTCountriesAPI\Client as RESTCountriesAPI;
 use XES\CodeChallenge\Model\ReadOnlyCountries;
 use XES\CodeChallenge\Model\SearchesCountries;
 use XES\CodeChallenge\Model\CustomSearch;
+use XES\CodeChallenge\Model\SearchType;
 use XES\CodeChallenge\Model\SearchBy;
+use XES\CodeChallenge\Model\SearchParameters;
 use XES\CodeChallenge\View\FilterBy;
 use XES\CodeChallenge\View\CountrySearchInput;
 use XES\CodeChallenge\View\CountryTable;
 use XES\CodeChallenge\View\HighlightedText;
-use XES\CodeChallenge\View\SearchType;
 use XES\CodeChallenge\View\SortOrder;
 use XES\CodeChallenge\View\SortBy;
 use XES\CodeChallenge\View\TableFilters;
 use XES\CodeChallenge\View\TableSorter;
 
-use const XES\CodeChallenge\Model\DEFAULT_SEARCH_BY;
-
 $term = @trim($_GET['q']);
 $filteringBy = FilterBy::tryFromArray(@$_GET["f"] ?? []) ?? [];
-$searchingBy = SearchBy::tryFromArray(@$_GET['s'] ?? []) ?? DEFAULT_SEARCH_BY;
+$searchingBy = SearchBy::tryFromArray(@$_GET['s'] ?? []) ?? SearchParameters::DEFAULT_SEARCH_BY;
+$ignoreCase = isset($_GET['i']);
 $sortBy = SortBy::tryFrom(@$_GET["t"]) ?? SortBy::Name;
 $sortOrder = SortOrder::tryFrom(@$_GET["o"]) ?? SortOrder::Asc;
 $searchType = SearchType::tryFrom(@$_GET['c']) ?? SearchType::API;
+
 
 /** @var ReadOnlyCountries */
 $countries = new RESTCountriesAPI();
@@ -37,9 +38,11 @@ $searchClient = match ($searchType) {
     SearchType::API => $countries
 };
 
-$searchResults = $searchClient->search($term, $searchingBy);
 
-$input = new CountrySearchInput($term, $searchingBy, $searchType);
+$params = new SearchParameters($searchingBy, $searchType, $ignoreCase);
+$searchResults = $searchClient->search($term, $params);
+
+
 $filters = new TableFilters($filteringBy);
 $sorter = new TableSorter($sortBy, $sortOrder);
 $tbl = new CountryTable($searchResults);
@@ -72,32 +75,36 @@ $tbl = new CountryTable($searchResults);
     </head>
     <body>
         <form method="GET">
-            <label for="q">Search Term</label>
-            <input type="search" name="q" placeholder="" value="<?=$input->term?>" />
+ 
+            <label for="q">Search Term</label><br/>
+            <input type="search" name="q" placeholder="" value="<?=$term?>" />
             <input type="submit" value="Search" />
+
+            <input type="checkbox" name="i" value="1" <?=$params->ignoreCase ? "checked": "" ?> />            
+            <label for="i">Ignore case?</label>
 
             <fieldset>
                 <legend>Search Type</legend>
 
-                <input type="radio" name="c" value="<?=SearchType::API->value?>" <?=$input->isSearchingType(SearchType::API) ? "checked": "" ?> />
+                <input type="radio" name="c" value="<?=SearchType::API->value?>" <?=$params->isSearchingType(SearchType::API) ? "checked": "" ?> />
                 <label for="c">API</label>
 
-                <input type="radio" name="c" value="<?=SearchType::Custom->value?>" <?=$input->isSearchingType(SearchType::Custom) ? "checked": "" ?> />
+                <input type="radio" name="c" value="<?=SearchType::Custom->value?>" <?=$params->isSearchingType(SearchType::Custom) ? "checked": "" ?> />
                 <label for="c">Custom</label>
             </fieldset>
 
             <fieldset> 
                 <legend>Search By </legend>
-                <input type="checkbox" name="s[]" value="<?=SearchBy::Name->value?>" <?=$input->isSearchingBy(SearchBy::Name) ? "checked": "" ?> />
+                <input type="checkbox" name="s[]" value="<?=SearchBy::Name->value?>" <?=$params->isSearchingBy(SearchBy::Name) ? "checked": "" ?> />
                 <label for="s[]">Name</label>
 
-                <input type="checkbox" name="s[]" value="<?=SearchBy::Codes->value?>" <?=$input->isSearchingBy(SearchBy::Codes) ? "checked": "" ?> />
+                <input type="checkbox" name="s[]" value="<?=SearchBy::Codes->value?>" <?=$params->isSearchingBy(SearchBy::Codes) ? "checked": "" ?> />
                 <label for="s[]">Codes</label>
 
-                <input type="checkbox" name="s[]" value="<?=SearchBy::Currency->value?>" <?=$input->isSearchingBy(SearchBy::Currency) ? "checked": "" ?> />
+                <input type="checkbox" name="s[]" value="<?=SearchBy::Currency->value?>" <?=$params->isSearchingBy(SearchBy::Currency) ? "checked": "" ?> />
                 <label for="s[]">Currency</label>
 
-                <input type="checkbox" name="s[]" value="<?=SearchBy::Region->value?>" <?=$input->isSearchingBy(SearchBy::Region) ? "checked": "" ?> />
+                <input type="checkbox" name="s[]" value="<?=SearchBy::Region->value?>" <?=$params->isSearchingBy(SearchBy::Region) ? "checked": "" ?> />
                 <label for="s[]">Region</label>
             </fieldset>
 
@@ -138,7 +145,7 @@ $tbl = new CountryTable($searchResults);
 
         <a href="/">Reset</a>
         
-        <?php if ($input->term !== ""): ?>
+        <?php if ($term !== ""): ?>
         <table>
             <thead>
                 <tr>
@@ -157,9 +164,9 @@ $tbl = new CountryTable($searchResults);
             </thead>
             <tbody>
                 <?php foreach ($sorter->getSortedRows($filters->getFilteredRows($tbl->getRows())) as $row): 
-                    $name = new HighlightedText($row->country->getName(), $input->term);
-                    $region = new HighlightedText($row->country->getRegion(), $input->term);
-                    $subregion = new HighlightedText($row->country->getSubregion(), $input->term);
+                    $name = new HighlightedText($row->country->getName(), $term);
+                    $region = new HighlightedText($row->country->getRegion(), $term);
+                    $subregion = new HighlightedText($row->country->getSubregion(), $term);
                 ?>
                     <tr>
                         <td>

@@ -3,6 +3,13 @@
 namespace XES\CodeChallenge\Model;
 
 
+enum SearchType: string
+{
+    case API = "api";
+    case Custom = "custom";
+}
+
+
 enum SearchBy: string
 {
     case Name = "name";
@@ -18,7 +25,31 @@ enum SearchBy: string
 }
 
 
-const DEFAULT_SEARCH_BY = [SearchBy::Name, SearchBy::Codes, SearchBy::Currency];
+class SearchParameters
+{
+    const DEFAULT_SEARCH_BY = [SearchBy::Name, SearchBy::Codes, SearchBy::Currency];
+
+    public function __construct(
+        public readonly array $searchingBy = DEFAULT_SEARCH_BY, 
+        public readonly SearchType $searchType = SearchType::API, 
+        public readonly bool $ignoreCase = true
+    ) { }
+
+    public function getCleansedTerm(string $term): string
+    {
+        return $this->ignoreCase ? strtolower($term) : $term;
+    }
+
+    public function isSearchingBy(SearchBy $searchBy): bool
+    {
+        return in_array($searchBy, $this->searchingBy);
+    }
+
+    public function isSearchingType(SearchType $searchType): bool
+    {
+        return $this->searchType == $searchType;
+    }
+}
 
 
 interface Country
@@ -38,11 +69,10 @@ interface Country
 interface SearchesCountries
 {
     /**
-     * @param string $term Search term
-     * @param SearchBy[] $searchingBy A list of search by criteria
+     * @param SearchParameters The search params
      * @return Country[] Results
      */
-    public function search(string $term, array $searchingBy = DEFAULT_SEARCH_BY): array;
+    public function search(string $term, SearchParameters $params): array;
 }
 
 
@@ -63,19 +93,19 @@ class CustomSearch implements SearchesCountries
     public function __construct(private readonly array $countries = []) { }
 
     
-    public function search(string $term, array $searchingBy = DEFAULT_SEARCH_BY): array
+    public function search(string $term, SearchParameters $params): array
     {   
-        return array_filter($this->countries, fn($country) => $this->matches($country, $term, $searchingBy));
+        return array_filter($this->countries, fn($country) => $this->matches($country, $term, $params));
     }
 
-    private function matches(Country $country, string $term, array $searchingBy = DEFAULT_SEARCH_BY): bool
+    private function matches(Country $country, string $term, SearchParameters $params): bool
     {
-        $term = strtolower($term);
         return in_array(true, array_map(fn($searchBy) => match ($searchBy) {
-            SearchBy::Name => str_contains(strtolower($country->getName()), $term),
-            SearchBy::Codes => str_contains(strtolower(join("", $country->getCodes())), $term),
-            SearchBy::Currency => str_contains(strtolower($country->getCurrency()), $term),
-            SearchBy::Region => str_contains(strtolower($country->getRegion()), $term) || str_contains(strtolower($country->getSubregion()), $term)
-        }, $searchingBy));
-    } 
+            SearchBy::Name => str_contains($params->getCleansedTerm($country->getName()), $params->getCleansedTerm($term)),
+            SearchBy::Codes => str_contains($params->getCleansedTerm(join("", $country->getCodes())), $params->getCleansedTerm($term)),
+            SearchBy::Currency => str_contains($params->getCleansedTerm($country->getCurrency()), $params->getCleansedTerm($term)),
+            SearchBy::Region => str_contains($params->getCleansedTerm($country->getRegion()), $params->getCleansedTerm($term)) 
+                || str_contains($params->getCleansedTerm($country->getSubregion()), $params->getCleansedTerm($term))
+        }, $params->searchingBy));
+    }
 }

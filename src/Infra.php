@@ -6,6 +6,7 @@ use XES\CodeChallenge\Model\Country;
 use XES\CodeChallenge\Model\ReadOnlyCountries;
 use XES\CodeChallenge\Model\SearchBy;
 use XES\CodeChallenge\Model\SearchesCountries;
+use XES\CodeChallenge\Model\SearchParameters;
 
 use const XES\CodeChallenge\Model\DEFAULT_SEARCH_BY;
 
@@ -21,12 +22,13 @@ class Client implements ReadOnlyCountries, SearchesCountries
         return array_map(fn($country) => new CountryAdapter($country), $countries);
     }
 
-    public function search(string $term, array $searchingBy = DEFAULT_SEARCH_BY): array 
+    public function search(string $term, SearchParameters $params): array 
     {
-        $slug = rawurlencode(strtolower($term));
+        $term = $params->getCleansedTerm($term);
+        $slug = rawurlencode($term);
         $fields = join(',', self::SEARCH_FIELDS);
 
-        $endpoints = array_reduce($searchingBy, fn($acc, $searchBy) => [...$acc, ...$this->getEndpoints($searchBy)], []);
+        $endpoints = array_reduce($params->searchingBy, fn($acc, $searchBy) => [...$acc, ...$this->getEndpoints($searchBy)], []);
 
         $all = array_reduce($endpoints, function($results, $endpoint) use ($slug, $fields) {
             $countries = json_decode(file_get_contents("https://restcountries.com/v3.1/$endpoint/$slug?fields=$fields"), true) ?? [];

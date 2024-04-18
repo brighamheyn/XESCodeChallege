@@ -3,15 +3,9 @@
 namespace XES\CodeChallenge\View;
 
 use XES\CodeChallenge\Model\Country;
+use XES\CodeChallenge\Model\SearchType;
 use XES\CodeChallenge\Model\SearchBy;
-
-
-enum SearchType: string
-{
-    case API = "api";
-    case Custom = "custom";
-}
-
+use XES\CodeChallenge\Model\SearchParameters;
 
 enum FilterBy: string
 {
@@ -129,17 +123,7 @@ class TableSorter
 
 class CountrySearchInput
 {
-    public function __construct(public readonly string $term = "", public readonly array $searchingBy = [], public readonly SearchType $searchType = SearchType::API) { }
-
-    public function isSearchingBy(SearchBy $searchBy): bool
-    {
-        return in_array($searchBy, $this->searchingBy);
-    }
-
-    public function isSearchingType(SearchType $searchType): bool
-    {
-        return $this->searchType == $searchType;
-    }
+    public function __construct(public readonly string $term = "") { }
 }
 
 
