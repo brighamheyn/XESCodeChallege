@@ -159,10 +159,7 @@ class CountryTable
      * @param Country[] $countries
      * @param FilterBy[] $filteringBy
      */
-    public function __construct(
-        private readonly array $countries,
-        public readonly ?TableSorter $sorter = null,
-    ) { } 
+    public function __construct(private readonly array $countries) { } 
 
     public function getRows(): array
     {
@@ -173,34 +170,12 @@ class CountryTable
 
         $this->rows = array_map(fn($country, $i) => new CountryRow($this, $country), $this->countries, array_keys($this->countries));
 
-        $this->sortRows();
-
         return $this->rows;
     }
 
     public function getRowCount(): int
     {
         return count($this->getRows());
-    }
-    
-    private function sortRows(): array
-    {
-        usort($this->rows,  fn($a, $b) => match ($this->sorter->sortBy) {
-            SortBy::Name => strcmp($a->country->getName(), $b->country->getName()),
-            SortBy::Population => $a->country->getPopulation() - $b->country->getPopulation(),
-            SortBy::Region => $a->country->getRegion() !== $b->country->getRegion() 
-                ? strcmp($a->country->getRegion(), $b->country->getRegion()) 
-                : strcmp($a->country->getSubregion(), $b->country->getSubregion()),
-            default => 0
-        });
-
-        $this->rows = match ($this->sorter->sortOrder) {
-            SortOrder::Asc => $this->rows,
-            SortOrder::Desc => array_reverse($this->rows),
-            default => $this->rows
-        };
-
-        return $this->rows;
     }
 }
 
