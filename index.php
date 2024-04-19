@@ -6,6 +6,7 @@ include 'src/View.php';
 
 use XES\CodeChallenge\Infra\RESTCountriesAPI\Client as RESTCountriesAPI;
 use XES\CodeChallenge\Infra\RESTCountriesAPI\InMemorySearch;
+use XES\CodeChallenge\Infra\RESTCountriesAPI\Op;
 use XES\CodeChallenge\Infra\RESTCountriesAPI\Profiler;
 use XES\CodeChallenge\Model\SearchesCountries;
 use XES\CodeChallenge\Model\SearchBy;
@@ -23,6 +24,7 @@ $term = @trim($_GET['q']);
 $filteringBy = FilterBy::tryFromArray(@$_GET["f"] ?? []) ?? [];
 $searchingBy = SearchBy::tryFromArray(@$_GET['s'] ?? []) ?? SearchParameters::DEFAULT_SEARCH_BY;
 $ignoreCase = isset($_GET['i']) ? (bool)@$_GET['i'] : true;
+$includeMetadata = isset($_GET['m']) ? (bool)@$_GET['m'] : true;
 $sortBy = SortBy::tryFrom(@$_GET["t"]) ?? SortBy::Name;
 $sortOrder = SortOrder::tryFrom(@$_GET["o"]) ?? SortOrder::Asc;
 $searchType = SearchType::tryFrom(@$_GET['c']) ?? SearchType::RESTCountriesAPI;
@@ -82,6 +84,10 @@ $tbl = new CountryTable($countries);
             <input type="hidden" name="i" value="0" /> 
             <input type="checkbox" name="i" value="1" <?=$params->ignoreCase ? "checked": "" ?> />          
             <label for="i">Ignore case?</label>
+
+            <input type="hidden" name="m" value="0" /> 
+            <input type="checkbox" name="m" value="1" <?=$includeMetadata ? "checked": "" ?> />          
+            <label for="m">Include metadata?</label>
 
             <fieldset>
                 <legend>Search Type</legend>
@@ -148,17 +154,42 @@ $tbl = new CountryTable($countries);
         <?php if ($term !== ""): ?>
 
         <h6>Search Results</h6>
-        <table>
-            <thead>
-                <tr>
-                    <th>ms = <?=Profiler::getDuration()?></th>
-                    <th>kB = <?=Profiler::getBytes() / 1000.0?></th>
-                    <th>Total = <?=$tbl->getRowCount()?></th>
-                    <th>Showing = <?=$filters->getFilteredRowCount($tbl->getRows())?></th>
-                    <th>Hidden = <?=$filters->getFilteredOutRowCount($tbl->getRows())?></th>
-                </tr>
-            </thead>
-        </table>
+
+            <?php if ($includeMetadata): ?>
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="3">I/0</th>
+                        <th colspan="1">Search</th>
+                        <th colspan="3">Results</th>
+                    </tr>
+                    <tr>
+                        <th>Requests</th>
+                        <th>ms</th>
+                        <th>kB</th>
+
+                        <th>ms</th>
+
+                        <th>Total</th>
+                        <th>Showing</th>
+                        <th>Hidden</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><?=Profiler::get(Op::IO->value)->getIO()?></td>
+                        <td><?=round(Profiler::get(Op::IO->value)->getDuration() / 1000000.0, 0)?></td>
+                        <td><?=round(Profiler::get(Op::IO->value)->getBytes() / 1000.0, 2)?></td>
+
+                        <td><?=round(Profiler::get(Op::Search->value)->getDuration() / 1000000.0, 0)?></td>
+
+                        <td><?=$tbl->getRowCount()?></td>
+                        <td><?=$filters->getFilteredRowCount($tbl->getRows())?></td>
+                        <td><?=$filters->getFilteredOutRowCount($tbl->getRows())?></td>
+                    </tr>
+                </tbody>
+            </table>
+            <?php endif; ?>
 
         <table>
             <thead>

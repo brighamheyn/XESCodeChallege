@@ -9,6 +9,7 @@ enum SearchType: string
 {
     case RESTCountriesAPI = "rest_countries";
     case InMemory = "in_memory";
+    case OnClient = "on_client";
 }
 
 

@@ -7,6 +7,84 @@ use XES\CodeChallenge\Model\SearchBy;
 use XES\CodeChallenge\Model\SearchesCountries;
 use XES\CodeChallenge\Model\SearchParameters;
 
+
+enum Op: string
+{
+    case Search = "search";
+    case IO = "io";
+}
+
+
+class Profiler
+{
+    private static array $profilers = [];
+
+    private float $start = 0;
+
+    public static function get(string $op): self
+    {
+        $self = array_key_exists($op, self::$profilers)
+            ? self::$profilers[$op]
+            : new self($op);
+
+        self::$profilers[$op] = $self;
+        return $self;
+    }
+
+    private function __construct(
+        public readonly string $op,
+        private float $duration = 0,
+        private float $bytes = 0,
+        private int $io = 0
+    ) 
+    { }
+
+    public function start(): void
+    {
+        $this->start = hrtime(true);
+    }
+
+    public function end(): void
+    {
+        $this->addDuration(hrtime(true) - $this->start);
+        $this->start = 0;
+    }
+
+    /**
+     * @return float nanoseconds
+     */
+    public function getDuration(): float
+    {
+        return $this->duration;
+    }
+
+    public function getBytes(): float
+    {
+        return $this->bytes;
+    }
+
+    public function getIO(): int
+    {
+        return $this->io;
+    }
+
+    public function addDuration(float $ms): void
+    {
+        $this->duration += $ms;
+    }
+
+    public function addBytes(float $b): void
+    {
+        $this->bytes += $b;
+    }
+
+    public function addIO(int $io): void
+    {
+        $this->io += $io; 
+    }
+}
+
+
 class Client implements SearchesCountries
 {
     public const SEARCH_FIELDS = ['name', 'population', 'region', 'subregion', 'currencies', 'flags', 'startOfWeek', 'cca2', 'ccn3', 'cca3', 'cioc', 'car'];
@@ -26,6 +104,8 @@ class Client implements SearchesCountries
 
         $endpoints = array_reduce($params->searchingBy, fn($acc, $searchBy) => [...$acc, ...$this->getEndpoints($searchBy)], []);
 
+        Profiler::get(Op::Search->value)->start();
+
         $all = array_reduce($endpoints, function($results, $endpoint) use ($slug) {
             $countries = $this->requestCountries($endpoint, $slug); 
 
@@ -44,6 +124,8 @@ class Client implements SearchesCountries
             return $partial;
         }, []));
 
+        Profiler::get(Op::Search->value)->end();
+
         return array_map(fn($country) => new CountryAdapter($country), $countries);
     }
 
@@ -54,12 +136,13 @@ class Client implements SearchesCountries
     {
         $fields = join(',', self::SEARCH_FIELDS);
 
-        Profiler::start();
+        Profiler::get(Op::IO->value)->start();
 
         $json = file_get_contents("https://restcountries.com/v3.1/$endpoint/$slug?fields=$fields");
 
-        Profiler::end();
-        Profiler::addBytes(strlen($json));
+        Profiler::get(Op::IO->value)->end();
+        Profiler::get(Op::IO->value)->addBytes(strlen($json));
+        Profiler::get(Op::IO->value)->addIO(1);
 
         $countries = json_decode($json, true) ?? [];
 
@@ -150,9 +233,9 @@ class InMemorySearch implements SearchesCountries
      */
     public function search(string $term, SearchParameters $params): array
     {   
-        Profiler::start();
+        Profiler::get(Op::Search->value)->start();
         $countries = array_filter($this->countries, fn($country) => $this->matches($country, $term, $params));
-        Profiler::end();
+        Profiler::get(Op::Search->value)->end();
 
         return $countries;
     }
@@ -170,43 +253,4 @@ class InMemorySearch implements SearchesCountries
 }
 
 
-abstract class Profiler
-{
-    private static float $duration = 0;
-
-    private static float $bytes = 0;
-
-    private static float $start = 0;
-
-    public static function start(): void
-    {
-        self::$start = microtime(true);
-    }
-
-    public static function end(): void
-    {
-        self::addDuration(microtime(true) - self::$start);
-        self::$start = 0;
-    }
-
-    public static function getDuration(): float
-    {
-        return round(self::$duration, 4);
-    }
-
-    public static function getBytes(): float
-    {
-        return self::$bytes;
-    }
-
-    public static function addDuration(float $ms): void
-    {
-        self::$duration += $ms;
-    }
-
-    public static function addBytes(float $b): void
-    {
-        self::$bytes += $b;
-    }
-}
 
