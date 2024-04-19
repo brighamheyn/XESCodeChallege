@@ -43,11 +43,6 @@ class TableFilters
         $this->filteringBy));
     }
 
-    public function isFilteringBy(FilterBy $filterBy): bool
-    {
-        return in_array($filterBy, $this->filteringBy);
-    }
-
     /**
      * @param Country[] $rows
      */
@@ -118,11 +113,6 @@ class TableSorter
         $rows = array_map(fn($row, $i) => $row->reIndex($i), $rows, array_keys($rows));
 
         return $rows;
-    }
-
-    public function isSortingBy(SortBy $sortBy): bool
-    {
-        return $this->sortBy == $sortBy;
     }
 }
 

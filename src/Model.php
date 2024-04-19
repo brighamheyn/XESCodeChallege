@@ -34,11 +34,6 @@ class SearchParameters
     {
         return $this->ignoreCase ? strtolower($term) : $term;
     }
-
-    public function isSearchingBy(SearchBy $searchBy): bool
-    {
-        return in_array($searchBy, $this->searchingBy);
-    }
 }
 
 

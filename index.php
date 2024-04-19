@@ -101,42 +101,42 @@ $tbl = new CountryTable($countries);
 
             <fieldset> 
                 <legend>Search By </legend>
-                <input type="checkbox" name="s[]" value="<?=SearchBy::Name->value?>" <?=$params->isSearchingBy(SearchBy::Name) ? "checked": "" ?> />
+                <input type="checkbox" name="s[]" value="<?=SearchBy::Name->value?>" <?=in_array(SearchBy::Name, $searchingBy) ? "checked": "" ?> />
                 <label for="s[]">Name</label>
 
-                <input type="checkbox" name="s[]" value="<?=SearchBy::Codes->value?>" <?=$params->isSearchingBy(SearchBy::Codes) ? "checked": "" ?> />
+                <input type="checkbox" name="s[]" value="<?=SearchBy::Codes->value?>" <?=in_array(SearchBy::Codes, $searchingBy) ? "checked": "" ?> />
                 <label for="s[]">Codes</label>
 
-                <input type="checkbox" name="s[]" value="<?=SearchBy::Currency->value?>" <?=$params->isSearchingBy(SearchBy::Currency) ? "checked": "" ?> />
+                <input type="checkbox" name="s[]" value="<?=SearchBy::Currency->value?>" <?=in_array(SearchBy::Currency, $searchingBy) ? "checked": "" ?> />
                 <label for="s[]">Currency</label>
 
-                <input type="checkbox" name="s[]" value="<?=SearchBy::Region->value?>" <?=$params->isSearchingBy(SearchBy::Region) ? "checked": "" ?> />
+                <input type="checkbox" name="s[]" value="<?=SearchBy::Region->value?>" <?=in_array(SearchBy::Region, $searchingBy) ? "checked": "" ?> />
                 <label for="s[]">Region</label>
             </fieldset>
 
             <fieldset> 
                 <legend>Filter By </legend>
 
-                <input type="checkbox" name="f[]" value="<?=FilterBy::PopulationIsGreaterThan10M->value?>" <?=$filters->isFilteringBy(FilterBy::PopulationIsGreaterThan10M) ? "checked" : ""?>/>
+                <input type="checkbox" name="f[]" value="<?=FilterBy::PopulationIsGreaterThan10M->value?>" <?=in_array(FilterBy::PopulationIsGreaterThan10M, $filteringBy) ? "checked" : ""?>/>
                 <label>Population > 10m</label>
 
-                <input type="checkbox" name="f[]" value="<?=FilterBy::StartOfWeekIsSunday->value?>" <?=$filters->isFilteringBy(FilterBy::StartOfWeekIsSunday) ? "checked" : ""?>/>
+                <input type="checkbox" name="f[]" value="<?=FilterBy::StartOfWeekIsSunday->value?>" <?=in_array(FilterBy::StartOfWeekIsSunday, $filteringBy) ? "checked" : ""?>/>
                 <label>Starts week on Sunday</label>
 
-                <input type="checkbox" name="f[]" value="<?=FilterBy::DrivesOnRightSideOfRoad->value?>" <?=$filters->isFilteringBy(FilterBy::DrivesOnRightSideOfRoad) ? "checked" : ""?>/>
+                <input type="checkbox" name="f[]" value="<?=FilterBy::DrivesOnRightSideOfRoad->value?>" <?=in_array(FilterBy::DrivesOnRightSideOfRoad, $filteringBy) ? "checked" : ""?>/>
                 <label>Drives on the Right</label>
             </fieldset>
 
             <fieldset> 
                 <legend>Sort By</legend>
 
-                <input type="radio" name="t" value="<?=SortBy::Name->value?>" <?=$sorter->isSortingBy(SortBy::Name) ? "checked" : ""?>/>
+                <input type="radio" name="t" value="<?=SortBy::Name->value?>" <?=$sortBy == SortBy::Name ? "checked" : ""?>/>
                 <label>Name</label>
 
-                <input type="radio" name="t" value="<?=SortBy::Population->value?>" <?=$sorter->isSortingBy(SortBy::Population) ? "checked" : ""?>/>
+                <input type="radio" name="t" value="<?=SortBy::Population->value?>" <?=$sortBy == SortBy::Population ? "checked" : ""?>/>
                 <label>Population</label>
 
-                <input type="radio" name="t" value="<?=SortBy::Region->value?>" <?=$sorter->isSortingBy(SortBy::Region) ? "checked" : ""?>/>
+                <input type="radio" name="t" value="<?=SortBy::Region->value?>" <?=$sortBy == SortBy::Region ? "checked" : ""?>/>
                 <label>Region</label>
 
                 <span>|</span>
@@ -228,6 +228,7 @@ $tbl = new CountryTable($countries);
         </table>
         <?php endif; ?>
     </body>
+    <script type="text/babel" data-presets="env,react" src="hybrid.jsx"></script>
 </html>
 
 
