@@ -6,6 +6,7 @@ include 'src/View.php';
 
 use XES\CodeChallenge\Infra\RESTCountriesAPI\Client as RESTCountriesAPI;
 use XES\CodeChallenge\Infra\RESTCountriesAPI\InMemorySearch;
+use XES\CodeChallenge\Infra\RESTCountriesAPI\Profiler;
 use XES\CodeChallenge\Model\SearchesCountries;
 use XES\CodeChallenge\Model\SearchBy;
 use XES\CodeChallenge\Model\SearchParameters;
@@ -38,12 +39,12 @@ $searchClient = match ($searchType) {
 $params = new SearchParameters($searchingBy, $ignoreCase);
 
 
-$searchResults = $searchClient->search($term, $params);
+$countries = $term !== "" ? $searchClient->search($term, $params) : [];
 
 
 $filters = new TableFilters($filteringBy);
 $sorter = new TableSorter($sortBy, $sortOrder);
-$tbl = new CountryTable($searchResults);
+$tbl = new CountryTable($countries);
 
 ?>
 
@@ -143,15 +144,24 @@ $tbl = new CountryTable($searchResults);
         </form>
 
         <a href="/">Reset</a>
-        
+
         <?php if ($term !== ""): ?>
+
+        <h6>Search Results</h6>
         <table>
             <thead>
                 <tr>
-                    <th colspan="2">Total = <?=$tbl->getRowCount()?></th>
-                    <th colspan="2">Showing = <?=$filters->getFilteredRowCount($tbl->getRows())?></th>
-                    <th colspan="2">Hidden = <?=$filters->getFilteredOutRowCount($tbl->getRows())?></th>
+                    <th>ms = <?=Profiler::getDuration()?></th>
+                    <th>kB = <?=Profiler::getBytes() / 1000.0?></th>
+                    <th>Total = <?=$tbl->getRowCount()?></th>
+                    <th>Showing = <?=$filters->getFilteredRowCount($tbl->getRows())?></th>
+                    <th>Hidden = <?=$filters->getFilteredOutRowCount($tbl->getRows())?></th>
                 </tr>
+            </thead>
+        </table>
+
+        <table>
+            <thead>
                 <tr>
                     <th>Country name</th>
                     <th>Population</th>

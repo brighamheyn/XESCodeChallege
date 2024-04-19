@@ -13,8 +13,7 @@ class Client implements SearchesCountries
 
     public function all(): array 
     {
-        $fields = join(',', self::SEARCH_FIELDS);
-        $countries = json_decode(file_get_contents("https://restcountries.com/v3.1/all?fields=$fields"), true) ?? [];
+        $countries = $this->requestCountries("all");
 
         return array_map(fn($country) => new CountryAdapter($country), $countries);
     }
@@ -23,12 +22,12 @@ class Client implements SearchesCountries
     {
         $term = $params->getCleansedTerm($term);
         $slug = rawurlencode($term);
-        $fields = join(',', self::SEARCH_FIELDS);
+        
 
         $endpoints = array_reduce($params->searchingBy, fn($acc, $searchBy) => [...$acc, ...$this->getEndpoints($searchBy)], []);
 
-        $all = array_reduce($endpoints, function($results, $endpoint) use ($slug, $fields) {
-            $countries = json_decode(file_get_contents("https://restcountries.com/v3.1/$endpoint/$slug?fields=$fields"), true) ?? [];
+        $all = array_reduce($endpoints, function($results, $endpoint) use ($slug) {
+            $countries = $this->requestCountries($endpoint, $slug); 
 
             // the API returns an object instead of an array for searches with only 1 result
             // check if result is a non-empty associative or indexed array
@@ -46,6 +45,25 @@ class Client implements SearchesCountries
         }, []));
 
         return array_map(fn($country) => new CountryAdapter($country), $countries);
+    }
+
+    /**
+     * @return Country[]
+     */
+    private function requestCountries(string $endpoint, string $slug = ""): array
+    {
+        $fields = join(',', self::SEARCH_FIELDS);
+
+        Profiler::start();
+
+        $json = file_get_contents("https://restcountries.com/v3.1/$endpoint/$slug?fields=$fields");
+
+        Profiler::end();
+        Profiler::addBytes(strlen($json));
+
+        $countries = json_decode($json, true) ?? [];
+
+        return $countries;
     }
 
     private function getEndpoints(SearchBy $searchBy): array
@@ -132,7 +150,11 @@ class InMemorySearch implements SearchesCountries
      */
     public function search(string $term, SearchParameters $params): array
     {   
-        return array_filter($this->countries, fn($country) => $this->matches($country, $term, $params));
+        Profiler::start();
+        $countries = array_filter($this->countries, fn($country) => $this->matches($country, $term, $params));
+        Profiler::end();
+
+        return $countries;
     }
 
     private function matches(Country $country, string $term, SearchParameters $params): bool
@@ -144,6 +166,47 @@ class InMemorySearch implements SearchesCountries
             SearchBy::Region => str_contains($params->getCleansedTerm($country->getRegion()), $params->getCleansedTerm($term)) 
                 || str_contains($params->getCleansedTerm($country->getSubregion()), $params->getCleansedTerm($term))
         }, $params->searchingBy));
+    }
+}
+
+
+abstract class Profiler
+{
+    private static float $duration = 0;
+
+    private static float $bytes = 0;
+
+    private static float $start = 0;
+
+    public static function start(): void
+    {
+        self::$start = microtime(true);
+    }
+
+    public static function end(): void
+    {
+        self::addDuration(microtime(true) - self::$start);
+        self::$start = 0;
+    }
+
+    public static function getDuration(): float
+    {
+        return round(self::$duration, 4);
+    }
+
+    public static function getBytes(): float
+    {
+        return self::$bytes;
+    }
+
+    public static function addDuration(float $ms): void
+    {
+        self::$duration += $ms;
+    }
+
+    public static function addBytes(float $b): void
+    {
+        self::$bytes += $b;
     }
 }
 

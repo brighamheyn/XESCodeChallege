@@ -65,5 +65,3 @@ interface SearchesCountries
     public function search(string $term, SearchParameters $params): array;
 }
 
-
-
